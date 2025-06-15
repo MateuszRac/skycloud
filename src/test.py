@@ -16,7 +16,7 @@ WWW_PATH = os.path.normpath(WWW_PATH)
 
 
 # Send GET request
-url = 'https://danepubliczne.imgw.pl/api/data/synop/'
+url = 'https://danepubliczne.imgw.pl/api/data/meteo/'
 response = requests.get(url)
 response.raise_for_status()
 data = response.json()
