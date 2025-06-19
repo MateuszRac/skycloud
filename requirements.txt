@@ -8,3 +8,5 @@ geopandas
 pyproj
 shapely
 cartopy
+opencv-python
+scipy
