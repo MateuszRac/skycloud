@@ -317,6 +317,31 @@ class Radar:
         print(f"HTML written to {output_file}")
 
 
+        self.generate_colorscale(custom_cmap=custom_cmap)
+
+
+    def generate_colorscale(self,custom_cmap):
+
+        # Save colorbar (color scale) as a vertical image
+        fig_cb, ax_cb = plt.subplots(figsize=(0.5, 5))  # Tall, narrow figure for vertical colorbar
+
+        # Create dummy image for colorbar reference
+        sm = plt.cm.ScalarMappable(cmap=custom_cmap, norm=LogNorm(vmin=0.1, vmax=50))
+        sm.set_array([])
+
+        # Add colorbar with formatted ticks (1 decimal place)
+        cbar = plt.colorbar(sm, cax=ax_cb, format=FormatStrFormatter('%.1f'))
+        cbar.ax.tick_params(labelsize=8)
+
+        # Optional: remove frame
+        ax_cb.set_frame_on(False)
+
+        # Save to file
+        colorbar_file = os.path.join(WWW_PATH, "radarimage_colorscale.png")
+        plt.savefig(colorbar_file, transparent=True, bbox_inches='tight', pad_inches=0.05, dpi=100)
+
+        plt.close(fig_cb)
+
 
 
 
