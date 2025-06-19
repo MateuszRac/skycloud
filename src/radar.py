@@ -289,6 +289,37 @@ class Radar:
 
 
 
+
+        #render html
+
+        env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+        template = env.get_template('template_map.php')
+
+
+        # Render the template
+        html = template.render(
+            title="IMGW",
+            lon_min=min(lon_lr, lon_ul),
+            lon_max=max(lon_lr, lon_ul),
+            lat_min=min(lat_lr, lat_ul),
+            lat_max=max(lat_lr, lat_ul),
+            center_lon=(min(lon_lr, lon_ul)+max(lon_lr, lon_ul))/2,
+            center_lat=(min(lat_lr, lat_ul)+max(lat_lr, lat_ul))/2,
+            API_KEY = os.getenv('google_maps_api_key'),
+            DATETIME = datetime_str
+        )
+
+        # Save output
+        output_file = os.path.join(WWW_PATH,"index.html")
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(html)
+
+        print(f"HTML written to {output_file}")
+
+
+
+
+
 def main():
     r = Radar()
 
