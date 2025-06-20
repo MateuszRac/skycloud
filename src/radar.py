@@ -324,7 +324,7 @@ class Radar:
 
         #save to database
         df = self.generate_df_grid(values,extent=extent,parameter=product_name,timestp=datetime_dt)
-        self.save_df(df)
+        self.save_df(df,table_name='radar_data')
 
 
 
