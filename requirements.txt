@@ -12,3 +12,4 @@ opencv-python
 scipy
 sqlalchemy
 pymysql
+rasterio

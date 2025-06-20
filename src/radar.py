@@ -324,7 +324,7 @@ class Radar:
 
         #save to database
         df = self.generate_df_grid(values,extent=extent,parameter=product_name,timestp=datetime_dt)
-        self.save_df(df,table_name='radar_data')
+        self.save_as_json(df,os.path.join(WWW_PATH,"data.json"))
 
 
 
@@ -401,6 +401,11 @@ class Radar:
                                 table_name=table_name,
                                 if_exists='append'
                                 )
+
+    def save_as_json(self,df,path):
+        df.to_json(path, orient="records", date_format="iso", force_ascii=False, indent=2)
+
+
 
 
     def __save_df_to_mysql(self,df, host, user, password, database, table_name, port=3306, if_exists='replace',chunksize=10_000):
