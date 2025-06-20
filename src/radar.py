@@ -15,7 +15,9 @@ import cv2
 from scipy.ndimage import gaussian_filter, maximum_filter, label
 from jinja2 import Environment, FileSystemLoader
 from matplotlib.ticker import FormatStrFormatter
-
+from datetime import datetime,timezone
+from scipy.interpolate import RegularGridInterpolator
+from sqlalchemy import create_engine
 
 #load envs and global vars
 
@@ -214,7 +216,8 @@ class Radar:
         values = 10 ** (values_db / 10)
 
         datetime_str = rbdict['product']['data']['@date']+' '+rbdict['product']['data']['@time']
-
+        datetime_dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+        product_name = rbdict['product']['@name']
 
 
         # Set up figure with no padding
@@ -319,6 +322,11 @@ class Radar:
 
         self.generate_colorscale(custom_cmap=custom_cmap)
 
+        #save to database
+        df = self.generate_df_grid(values,extent=extent,parameter=product_name,timestp=datetime_dt)
+        self.save_df(df)
+
+
 
     def generate_colorscale(self,custom_cmap):
 
@@ -343,7 +351,78 @@ class Radar:
         plt.close(fig_cb)
 
 
+    def generate_df_grid(self,data,
+                         extent,
+                         parameter,
+                         timestp,
+                         created_at=datetime.now(tz=timezone.utc),
+                         grid_step=0.01):
 
+        lon_step = grid_step
+        lat_step = grid_step
+
+        # Original grid (from data shape)
+        H, W = data.shape
+        orig_lons = np.linspace(extent[0], extent[1], W)
+        orig_lats = np.linspace(extent[2], extent[3], H)
+
+        # Create interpolator (lat first, then lon)
+        interp = RegularGridInterpolator((orig_lats, orig_lons), data)
+
+        # Target regular grid
+        target_lons = np.round(np.arange(extent[0], extent[1], lon_step), 6)
+        target_lats = np.round(np.arange(extent[2], extent[3], lat_step), 6)
+
+        lon_grid, lat_grid = np.meshgrid(target_lons, target_lats)
+        points = np.column_stack((lat_grid.ravel(), lon_grid.ravel()))
+
+        # Interpolate
+        interpolated_values = interp(points)
+
+        # Create DataFrame
+        df = pd.DataFrame({
+            'value': interpolated_values,
+            'lon': lon_grid.ravel(),
+            'lat': lat_grid.ravel(),
+            'parameter': parameter,
+            'timestp': timestp,
+            'created_at': created_at,
+        })
+
+        return df
+
+    def save_df(self,df,table_name):
+
+        self.__save_df_to_mysql(df,
+                                host=os.getenv('db_host'),
+                                user=os.getenv('db_user'),
+                                password=os.getenv('db_password'),
+                                database=os.getenv('db_name'),
+                                table_name=table_name,
+                                if_exists='append'
+                                )
+
+
+    def __save_df_to_mysql(self,df, host, user, password, database, table_name, port=3306, if_exists='replace'):
+        """
+        Save a Pandas DataFrame to a MySQL database table.
+
+        Parameters:
+            df (pd.DataFrame): DataFrame to save.
+            host (str): MySQL host (e.g., 'your-db.rds.amazonaws.com' or IP).
+            user (str): MySQL username.
+            password (str): MySQL password.
+            database (str): Target MySQL database name.
+            table_name (str): Table name to save to.
+            port (int): MySQL port, default is 3306.
+            if_exists (str): Behavior if table exists ('replace', 'append', 'fail').
+        """
+        try:
+            engine = create_engine(f'mysql+pymysql://{user}:{password}@{host}:{port}/{database}')
+            df.to_sql(name=table_name, con=engine, if_exists=if_exists, index=False)
+            print(f"✅ DataFrame saved to `{table_name}` in `{database}` database.")
+        except Exception as e:
+            print(f"❌ Failed to save DataFrame: {e}")
 
 def main():
     r = Radar()
