@@ -403,27 +403,37 @@ class Radar:
                                 )
 
 
-    def __save_df_to_mysql(self,df, host, user, password, database, table_name, port=3306, if_exists='replace'):
+    def __save_df_to_mysql(self,df, host, user, password, database, table_name, port=3306, if_exists='replace',chunksize=10_000):
         """
-        Save a Pandas DataFrame to a MySQL database table.
+        Fast save of a Pandas DataFrame to a MySQL table using bulk insert.
 
         Parameters:
             df (pd.DataFrame): DataFrame to save.
-            host (str): MySQL host (e.g., 'your-db.rds.amazonaws.com' or IP).
-            user (str): MySQL username.
+            host (str): MySQL host.
+            user (str): MySQL user.
             password (str): MySQL password.
-            database (str): Target MySQL database name.
-            table_name (str): Table name to save to.
-            port (int): MySQL port, default is 3306.
-            if_exists (str): Behavior if table exists ('replace', 'append', 'fail').
+            database (str): MySQL database name.
+            table_name (str): Target table.
+            port (int): MySQL port, default 3306.
+            if_exists (str): 'fail', 'replace', or 'append'.
+            chunksize (int): Number of rows per batch insert.
         """
         try:
-            engine = create_engine(f'mysql+pymysql://{user}:{password}@{host}:{port}/{database}')
-            df.to_sql(name=table_name, con=engine, if_exists=if_exists, index=False)
-            print(f"✅ DataFrame saved to `{table_name}` in `{database}` database.")
+            engine = create_engine(
+                f'mysql+pymysql://{user}:{password}@{host}:{port}/{database}',
+                pool_recycle=3600
+            )
+            df.to_sql(
+                name=table_name,
+                con=engine,
+                if_exists=if_exists,
+                index=False,
+                method='multi',     # BATCH INSERT
+                chunksize=chunksize
+            )
+            print(f"✅ Fast insert complete: {len(df)} rows to `{table_name}`.")
         except Exception as e:
-            print(f"❌ Failed to save DataFrame: {e}")
-
+            print(f"❌ Insert failed: {e}")
 def main():
     r = Radar()
 
